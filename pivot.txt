@@ -1,0 +1,124 @@
+##4/10/26 created MHO_ASSIGNED folder
+##
+
+
+## 10/8/26
+## assigned duties downloaded from optima --> doc1,a,p,o,c etc etc   NEEDS TO BE TAB DELIMITED
+
+## usage gawk -f pivot.txt assignedduties.txt
+
+
+BEGIN{
+        #PROCINFO["sorted_in"] = "@ind_num_asc"
+
+	FS="\t"
+
+translate["CST 0800-1800"]="c"
+translate["CST 1400-1800"]="c"
+translate["CST 1400-1700"]="c"
+translate["CST 1200-1500"]="c"
+translate["CST 1200-1600"]="a"
+translate["CST 1600-1800"]="a"
+translate["MH 1400-2400"]="p"
+translate["MH 1000-2000"]="a"
+translate["CST 1400-1600"]="p"
+translate["MH 0800-1200"]="a"
+translate["MH 1600-2400"]="p"
+translate["MH 0800-1800"]="a"
+translate["MH 0800-1600"]="a"
+translate["MH 0800-1600 IC"]="a"
+translate["MH 0800-1800 IC"]="a"
+translate["MH 0800-1600 SSU"]="a"
+translate["MH 0800-1800 SSU"]="a"
+translate["MH 0800-1800 SSU"]="a"
+translate["MH 0800-1700 SSU"]="a"
+translate["MH 0800-1700 IC"]="a"
+translate["MH 0800-1700"]="a"
+
+translate["OnCall"]="p"
+translate["0000-0800 OC CAT2"]="p"
+translate["U 0000-2359"]="o"
+translate["AP stuff"] = "apo"
+translate["AA stuff"] = "ao"
+translate["PP stuff"] = "po"
+translate["UA stuff"] = "po"
+translate["UP stuff"] = "ao"
+
+
+} 
+
+NR>2{
+    # 1. Collect real data from the file
+    #roster[doc,day]=shift
+
+    DOC   = $2
+    DAY   = $3
+    SHIFT = $5
+    
+    fixed_day = to_yyyymmdd(DAY) + 0
+    
+    roster[DOC, fixed_day] = SHIFT
+  
+    #UNIQUE docs and days
+    
+    all_docs[DOC] = 1
+
+    all_days[fixed_day] = 1
+
+
+    docname = tolower(DOC)
+    
+    split(docname,first_last,/[[:space:]]/)
+    
+    FIRSTLAST[DOC]= substr(first_last[1],1,1)"_" first_last[2]  "_" (first_last[3] ? first_last[3] : substr(first_last[2],1,1))
+
+    FIRSTLAST[DOC]= substr(first_last[1],1,1) substr(first_last[2],1,6)
+
+}
+
+END {
+    n=asorti(all_days, sorted_days)
+  
+    for (doc in all_docs) {
+ 
+	out = FIRSTLAST[doc]
+
+        for (i=1;i<=n;i++) {
+
+	    day=sorted_days[i]
+
+            if (!((doc, day) in roster)) {
+
+                roster[doc, day] = "o"
+	    }
+
+            extracted = gensub(/.*\(([^)]*)\).*/, "\\1", "1", roster[doc,day])
+
+            out = out "," (translate[extracted] ? translate[extracted] : extracted)
+        
+	}
+
+	print out
+    }
+     
+#    print "num docs " length(all_docs)
+
+#    print "num days " length(all_days)
+
+#    for(i=1;i<=length(sorted_days);i++) print sorted_days[i]
+
+} #END
+
+  
+
+
+# Custom function to reformat dates
+function to_yyyymmdd(date_str,    parts) {
+    ## YYYYMMDD in string or number form sorts from lowest to highest -- ie in date order
+    # split breaks "DD/MM/YYYY" into parts[1]="DD", parts[2]="MM", parts[3]="YYYY"
+    if (split(date_str, parts, "/") == 3) {
+        # Concatenate them back together in the correct order
+        return parts[3] parts[2] parts[1]
+    }
+    return date_str # Return original if string format doesn't match
+}

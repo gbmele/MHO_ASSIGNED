@@ -1,0 +1,306 @@
+## 4/10/26 created MHO_ASSIGNED folder
+## usage takes output of pivot.txt ---- doc1,shift,shift,shift,shift,shift
+##                                      doc2,shift,shift,shift,shift,shift
+
+## creates minizinc file that gives SSU count Incharge Count and ONCALL count.s.
+
+
+
+BEGIN{
+	FS=","
+
+	mon = 1
+	tue = 2
+	wed = 3
+	thu = 4
+	fri = 5
+	sat = 6
+	sun = 0
+
+}
+
+NR < 1000{
+	DOC = $1
+	DOCS[DOC]=1
+	
+	ret=DOC " | "
+	
+	NUM_DAYS = NF - 1	
+
+	for(i=2;i<=NF;i++){
+
+		day = i - 1
+
+		sh = $i
+		
+		if( day % 7 == sat && match(sh,/\y(a|p)\y/)) {docs[DOC,sat]++} 
+		
+		else
+		
+		if( day % 7 == sun && (sh == "a" || sh == "p")) {docs[DOC,sun]++} 
+
+
+		# build weekends output
+
+		if ( day % 7  == sat ) ret = ret " " sh
+		#else
+		if ( day % 7  == sun ) ret = ret " " sh " | "
+				
+	
+		roster[DOC,day]=sh	
+	} #for
+	
+	#print ret
+
+
+} #MAIN
+
+END{
+
+
+        print "include \"globals.mzn\" ;           \n"
+	print "% include \"global_calendar.mzn\"  ;  \n"
+
+	printf ("int: DAYS = %s ; \n" , NUM_DAYS)
+
+	print "enum shifts =   {o,a,p,c,l,s,i,erl,al,cl,lsl,mat,pat,lwop,sab,phnw,apo ,x ,oc,u,ua,up,ap,}; \n"
+
+	enum ="enum docs = {"
+	for(doc in DOCS){
+
+		enum = enum doc ","	
+	}
+	enum = enum "} ;\n"
+	print enum
+
+
+	print "array[docs,1..DAYS,shifts] of var bool: roster ; \n"
+
+print "%% this is the key -- it sets all the other shifts not declared by me  to be false"
+print "constraint forall(d in docs, day in 1..DAYS)(       "
+print "   sum(sh in shifts)(bool2int(roster[d,day,sh])) = 1 ); \n"
+
+
+print "array[docs] of var int: target_s;    \n"
+print "array[docs] of var int: target_i;    \n"
+print "array[docs] of var int: target_oc;    \n"
+print "    \n"
+print "array[docs] of var int: min_s;    \n"
+print "array[docs] of var int: min_i;    \n"
+print "array[docs] of var int: min_oc;    \n"
+
+
+print "array[docs,1..DAYS] of var bool: ssu;    \n"
+print "array[docs,1..DAYS] of var bool: inc;    \n"
+print "array[docs,1..DAYS] of var bool: occ;    \n"
+
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+print "% ROLE MUST MATCH UNDERLYING SHIFTS    \n"
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+ 
+print "constraint forall(d in docs, day in 1..DAYS)(    \n"
+print "  ssu[d,day] -> roster[d,day,a] = 1);    \n"
+ 
+print "constraint forall(d in docs, day in 1..DAYS)(    \n"
+print "  inc[d,day] -> roster[d,day,a] = 1 );    \n"
+print "     \n"
+print "constraint forall(d in docs, day in 1..DAYS)(    \n"
+print "  occ[d,day] -> roster[d,day,p] = 1);    \n"
+print "     \n"
+
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+print "% DAILY REQUIREMENTS    \n"
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+ 
+print "constraint forall(day in 1..DAYS)(    \n"
+print "sum(d in docs)(bool2int(ssu[d,day])) = 1    \n"
+print ");    \n"
+ 
+print "constraint forall(day in 1..DAYS)(    \n"
+print "sum(d in docs)(bool2int(inc[d,day])) = 1    \n"
+print ");    \n"
+ 
+print "constraint forall(day in 1..DAYS)(    \n"
+print "sum(d in docs)(bool2int(occ[d,day])) = 1    \n"
+print ");    \n"
+ 
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+print "% S AND I CANNOT BE THE SAME PERSON    \n"
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+print "     \n"
+print "constraint forall(d in docs, day in 1..DAYS)(    \n"
+print "bool2int(ssu[d,day]) +    \n"
+print "bool2int(inc[d,day]) <= 1    \n"
+print ");    \n"
+
+
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+print "% COUNT ASSIGNMENTS PER DOCTOR    \n"
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+ 
+print "array[docs] of var int: n_s;    \n"
+print "array[docs] of var int: n_i;    \n"
+print "array[docs] of var int: n_oc;    \n"
+print "     \n"
+print "constraint forall(d in docs)(    \n"
+print "n_s[d] =    \n"
+print "sum(day in 1..DAYS)(bool2int(ssu[d,day]))    \n"
+print ");    \n"
+print "     \n"
+print "constraint forall(d in docs)(    \n"
+print "n_i[d] =    \n"
+print "sum(day in 1..DAYS)(bool2int(inc[d,day]))    \n"
+print ");    \n"
+print "     \n"
+print "constraint forall(d in docs)(    \n"
+print "n_oc[d] =    \n"
+print "sum(day in 1..DAYS)(bool2int(occ[d,day]))    \n"
+print ");    \n"
+
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+print "% TARGETS    \n"
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+ 
+print "constraint forall(d in docs)(    \n"
+print "n_s[d] <= target_s[d]);    \n"
+ 
+print "constraint forall(d in docs)(    \n"
+print "n_i[d] <= target_i[d]    \n"
+print ");    \n"
+ 
+print "constraint forall(d in docs)(    \n"
+print "n_oc[d] <= target_oc[d]  /\\ n_oc[d] >=min_oc[d]  \n"
+print ");    \n"
+
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+print "% NO MORE THAN ONE OC IN ANY min_oc_gap DAY WINDOW    \n"
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+print "     \n"
+print "int: min_oc_gap=14;    \n"
+print "constraint    \n"
+print "forall(d in docs, day in 1..DAYS-min_oc_gap+1)(    \n"
+print "sum(k in day..day+min_oc_gap-1)(    \n"
+print "bool2int(occ[d,k])    \n"
+print ") <= 1    \n"
+print ");    \n"
+
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+print "% NO MORE THAN ONE INC IN ANY min_inc_gap DAY WINDOW    \n"
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+print "     \n"
+print "int: min_inc_gap=2;    \n"
+print "constraint    \n"
+print "forall(d in docs, day in 1..DAYS-min_inc_gap+1)(    \n"
+print "sum(k in day..day+min_inc_gap-1)(    \n"
+print "bool2int(inc[d,k])    \n"
+print ") <= 1    \n"
+print ");    \n"
+
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+print "% NO MORE THAN ONE SSU IN ANY min_ssu_gap DAY WINDOW    \n"
+print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
+print "     \n"
+print "int: min_ssu_gap=2;    \n"
+print "constraint    \n"
+print "forall(d in docs, day in 1..DAYS-min_ssu_gap+1)(    \n"
+print "sum(k in day..day+min_ssu_gap-1)(    \n"
+print "bool2int(ssu[d,k])    \n"
+print ") <= 1    \n"
+print ");    \n"
+
+###OUTPUT
+print "output[\"\\nSSU\\n\"];  \n"
+
+print "output [  \n"
+   
+print "show([d | d in docs where fix(ssu[d,day]) = true]) ++\",\" | day in 1..DAYS ]; \n"
+
+print "output[\"\\n\\n\"];  \n"
+
+
+
+#print "output[\"\\nINCHARGE\\n\"];  \n"
+
+print "output [  \n"
+   
+print "show([d | d in docs where fix(inc[d,day]) = true]) ++\",\" | day in 1..DAYS ]; \n"
+
+print "output[\"\\n\\n\"];  \n"
+
+
+#print "output[\"\\nONCALL\\n\"];  \n"
+
+print "output [  \n"
+   
+print "show([d | d in docs where fix(occ[d,day]) = true]) ++\",\" | day in 1..DAYS ]; \n"
+
+print "output[\"\\n\\n\"];  \n"
+
+
+##prints roster
+printf "%% print roster\n"
+print "output [ "
+print "  show(d) ++ \",\" ++    \n"
+print "  concat([     \n"
+print "  show(sh) ++ \",\"    \n"
+print "  | day in 1..DAYS,    \n"
+print "  sh in shifts    \n"
+print "  where fix(roster[d,day,sh])])++ \"\\n\"| d in docs]; \n"
+
+
+## print counts
+print "%% SIC COUNTS"
+printf "output [     \n"
+printf "  show(d)     \n"
+printf "  ++ \" \\t\\tS = \" ++ show(n_s[d])     \n"
+printf "  ++ \" \\tI = \" ++ show(n_i[d])     \n"
+printf "  ++ \" \\tOC = \" ++ show(n_oc[d])     \n"
+printf "  ++ \"\\n\"     \n"
+printf "  | d in docs       \n"
+printf "  ];     \n"
+
+
+
+
+
+
+
+
+
+
+#### this is the SSIIICC counts
+printf "predicate set_SIC(docs:doc,int:S,int:I,int:OC_min,int:OC_max)= \n"
+printf "  (target_s[doc]= S /\\ target_i[doc] = I /\\ min_oc[doc]=OC_min /\\ target_oc[doc]=OC_max); \n\n\n"
+  
+
+
+for(doc in DOCS){
+
+	printf("constraint set_SIC(%s,5,5,0,5); \n",doc)
+
+
+}
+	printf "\n"
+
+
+
+
+
+	## JUST THE DATA COMING OUT BELOW
+	for(doc in DOCS){
+
+		for(i=1;i<=NUM_DAYS;i++){
+
+#			print doc " " i " " roster[doc,i]
+			printf ("constraint roster[%s,%s,%s] = 1 ; \n",doc,i,roster[doc,i])
+		}		
+
+	} #for
+	
+	
+
+
+
+
+
+} #END
