@@ -1,0 +1,361 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% MINIZINC BOOLEAN ARITHMETIC TUTORIAL
+%
+% Your availability codes:
+%
+% u  = unavailable
+% o  = free
+% ap = can do A or P
+% ua = can do P or O
+% up = can do A or O
+%
+% Your allocation layers:
+%
+% fri_pm[d,day]
+% sat_am[d,day]
+% sat_pm[d,day]
+% sun_am[d,day]
+% sun_pm[d,day]
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+==============================================================================
+PART 1: THE BIG IDEA
+==============================================================================
+
+Think of all allocation variables as 0/1 variables:
+
+false = 0
+true  = 1
+
+Then many business rules become arithmetic.
+
+Instead of:
+
+    fri_pm -> not sat_am
+
+you can write:
+
+    bool2int(fri_pm)
+  + bool2int(sat_am)
+  <= 1
+
+This says:
+
+    both cannot be true
+
+which is exactly the same thing.
+
+==============================================================================
+PART 2: BOOLEAN OPERATORS
+==============================================================================
+
+--------------------------------------------------------------------------
+NOT
+--------------------------------------------------------------------------
+
+Logical:
+
+    not A
+
+Arithmetic:
+
+    bool2int(A) = 0
+
+Example:
+
+    not fri_pm[d,day]
+
+same as
+
+    bool2int(fri_pm[d,day]) = 0
+
+--------------------------------------------------------------------------
+AND
+--------------------------------------------------------------------------
+
+Logical:
+
+    A /\ B
+
+Both must be true.
+
+Example:
+
+    fri_pm[d,day]
+    /\
+    sat_am[d,day]
+
+means both allocations occur.
+
+--------------------------------------------------------------------------
+OR
+--------------------------------------------------------------------------
+
+Logical:
+
+    A \/ B
+
+One or both are true.
+
+Arithmetic equivalent:
+
+    bool2int(A)
+  + bool2int(B)
+  >= 1
+
+Examples:
+
+    A=1 B=0  OK
+    A=0 B=1  OK
+    A=1 B=1  OK
+
+--------------------------------------------------------------------------
+XOR
+--------------------------------------------------------------------------
+
+Exactly one.
+
+Logical:
+
+    (A \/ B)
+    /\
+    not(A /\ B)
+
+Arithmetic:
+
+    bool2int(A)
+  + bool2int(B)
+  = 1
+
+Example:
+
+    sat_am + sat_pm = 1
+
+means exactly one Saturday duty.
+
+--------------------------------------------------------------------------
+IFF (<->)
+--------------------------------------------------------------------------
+
+Logical:
+
+    A <-> B
+
+Arithmetic:
+
+    bool2int(A)
+    =
+    bool2int(B)
+
+Example:
+
+    fri_pm[d,day]
+    <->
+    roster[d,day,p]
+
+means they are exactly the same fact.
+
+==============================================================================
+PART 3: IMPLICATION
+==============================================================================
+
+--------------------------------------------------------------------------
+A -> B
+--------------------------------------------------------------------------
+
+Logical:
+
+    A -> B
+
+Arithmetic:
+
+    bool2int(A)
+    <=
+    bool2int(B)
+
+Truth table:
+
+    A B
+
+    0 0  OK
+    0 1  OK
+    1 0  BAD
+    1 1  OK
+
+Example:
+
+    fri_pm -> eligible
+
+becomes
+
+    bool2int(fri_pm)
+    <=
+    bool2int(eligible)
+
+--------------------------------------------------------------------------
+A -> NOT B
+--------------------------------------------------------------------------
+
+Logical:
+
+    A -> not B
+
+Arithmetic:
+
+    bool2int(A)
+  + bool2int(B)
+  <= 1
+
+Example:
+
+    fri_pm -> not sat_am
+
+becomes
+
+    bool2int(fri_pm)
+  + bool2int(sat_am)
+  <= 1
+
+==============================================================================
+PART 4: ELIGIBILITY MODELING
+==============================================================================
+
+This is the idea you discovered:
+
+    allocation <= eligibility
+
+This is extremely powerful.
+
+Example:
+
+    sat_am allocation
+
+Eligible states:
+
+    a
+    ap
+    up
+    o
+
+Write:
+
+    bool2int(sat_am[d,day])
+    <=
+    bool2int(roster[d,day,a])
+  + bool2int(roster[d,day,ap])
+  + bool2int(roster[d,day,up])
+  + bool2int(roster[d,day,o])
+
+Interpretation:
+
+    IF sat_am=1
+
+then RHS must be >=1
+
+which means doctor must be in an eligible state.
+
+--------------------------------------------------------------------------
+SAT AM ELIGIBILITY
+--------------------------------------------------------------------------
+
+Eligible:
+
+    a
+    ap
+    up
+    o
+
+Constraint:
+
+    bool2int(sat_am[d,day])
+    <=
+    bool2int(roster[d,day,a])
+  + bool2int(roster[d,day,ap])
+  + bool2int(roster[d,day,up])
+  + bool2int(roster[d,day,o])
+
+--------------------------------------------------------------------------
+SAT PM ELIGIBILITY
+--------------------------------------------------------------------------
+
+Eligible:
+
+    p
+    ap
+    ua
+    o
+
+Constraint:
+
+    bool2int(sat_pm[d,day])
+    <=
+    bool2int(roster[d,day,p])
+  + bool2int(roster[d,day,ap])
+  + bool2int(roster[d,day,ua])
+  + bool2int(roster[d,day,o])
+
+==============================================================================
+PART 5: COMMON ROSTERING RULES
+==============================================================================
+
+--------------------------------------------------------------------------
+Cannot do Sat AM and Sat PM
+--------------------------------------------------------------------------
+
+    bool2int(sat_am[d,day])
+  + bool2int(sat_pm[d,day])
+  <= 1
+
+--------------------------------------------------------------------------
+Exactly one Saturday duty
+--------------------------------------------------------------------------
+
+    bool2int(sat_am[d,day])
+  + bool2int(sat_pm[d,day])
+  = 1
+
+--------------------------------------------------------------------------
+No Fri PM then Sat duty
+--------------------------------------------------------------------------
+
+    bool2int(fri_pm[d,day])
+  + bool2int(sat_am[d,day+1])
+  + bool2int(sat_pm[d,day+1])
+  <= 1
+
+--------------------------------------------------------------------------
+Unavailable cannot be Fri PM
+--------------------------------------------------------------------------
+
+    bool2int(roster[d,day,u])
+  + bool2int(fri_pm[d,day])
+  <= 1
+
+--------------------------------------------------------------------------
+No consecutive Friday PMs
+--------------------------------------------------------------------------
+
+    bool2int(fri_pm[d,day])
+  + bool2int(fri_pm[d,day+7])
+  <= 1
+
+--------------------------------------------------------------------------
+No consecutive weekends
+--------------------------------------------------------------------------
+
+    bool2int(weekend1)
+  + bool2int(weekend2)
+  <= 1
+
+==============================================================================
+PART 6: COUNTING
+==============================================================================
+
+Count Saturday AMs:
+
+    n_sat_am[d]
+    =
+    sum(day in DAYS where day mod 7 = 6)
+    (
+       bool2int(sat_am

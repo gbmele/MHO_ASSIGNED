@@ -1,0 +1,500 @@
+###############################################################################
+# pivot2.txt
+#
+# Converts Optima Assigned Duties export into:
+#
+#     doc,shift,shift,shift,...
+#
+# Each shift column corresponds to ONE CONSECUTIVE CALENDAR DAY.
+#
+# Example:
+#
+# gawk -v start="26/10/2026" -v end="03/01/2027" \
+#      -f pivot2.txt assignedOctJan.txt > assigned.csv
+#
+# For this example:
+#
+#     day 1  = 26/10/2026
+#     day 70 = 03/01/2027
+#
+###############################################################################
+
+
+BEGIN {
+
+    FS = "\t"
+
+
+    ###########################################################################
+    # CHECK START AND END DATES WERE SUPPLIED
+    ###########################################################################
+
+    if (start == "" || end == "") {
+
+        print "ERROR: must specify start and end dates" > "/dev/stderr"
+
+        print "Example:" > "/dev/stderr"
+
+        print "gawk -v start=\"26/10/2026\" -v end=\"03/01/2027\" -f pivot2.txt assignedOctJan.txt" > "/dev/stderr"
+
+        exit 1
+    }
+
+
+    ###########################################################################
+    # CONVERT START AND END DATES TO TIMESTAMPS
+    ###########################################################################
+
+    START_TIME = date_to_time(start)
+    END_TIME   = date_to_time(end)
+
+
+    if (START_TIME < 0 || END_TIME < 0) {
+
+        print "ERROR: invalid start or end date" > "/dev/stderr"
+
+        exit 1
+    }
+
+
+    if (END_TIME < START_TIME) {
+
+        print "ERROR: end date is before start date" > "/dev/stderr"
+
+        exit 1
+    }
+
+
+    ###########################################################################
+    # CALCULATE NUMBER OF ROSTER DAYS
+    #
+    # Inclusive:
+    #
+    #     start date = day 1
+    #     end date   = day DAYS
+    #
+    ###########################################################################
+
+    DAYS = int((END_TIME - START_TIME) / 86400) + 1
+
+
+
+    ###########################################################################
+    # SHIFT TRANSLATIONS
+    ###########################################################################
+
+    translate["CST 0800-1800"] = "c"
+    translate["CST 1400-1800"] = "c"
+    translate["CST 1400-1700"] = "c"
+    translate["CST 1200-1500"] = "c"
+    translate["CST 1200-1600"] = "c"
+    translate["CST 1200-1800"] = "c"
+
+    translate["CST 1600-1800"] = "a"
+    translate["CST 1700-1800"] = "a"
+
+    translate["CST 1000-1400"] = "c"
+
+
+    translate["MH 1400-2400"] = "p"
+
+    translate["MH 1000-2000"] = "c"
+
+    translate["CST 1400-1600"] = "p"
+
+    translate["MH 0800-1200"] = "c"
+
+    translate["MH 1600-2400"] = "p"
+
+
+    # Ruth's half shift.
+    # Deliberately code as c rather than a,
+    # to avoid in-charge SSU implications.
+
+    translate["MH 0800-1400"] = "c"
+
+
+    translate["MH 0800-1800"] = "a"
+
+    translate["MH 0800-1600"] = "a"
+
+    translate["MH 0800-1600 IC"] = "a"
+
+    translate["MH 0800-1800 IC"] = "a"
+
+    translate["MH 0800-1600 SSU"] = "a"
+
+    translate["MH 0800-1800 SSU"] = "a"
+
+    translate["MH 0800-1700 SSU"] = "a"
+
+    translate["MH 0800-1700 IC"] = "a"
+
+    translate["MH 0800-1700"] = "a"
+
+
+    translate["OnCall"] = "p"
+
+    translate["0000-0800 OC CAT2"] = "p"
+
+
+    translate["U 0000-2359"] = "o"
+
+
+    translate["AP stuff"] = "apo"
+
+    translate["AA stuff"] = "ao"
+
+    translate["PP stuff"] = "po"
+
+    translate["UA stuff"] = "po"
+
+    translate["UP stuff"] = "ao"
+
+
+    translate["AP 0000-2359"] = "o"
+
+    translate["AA 0800-1800"] = "ao"
+
+
+
+    ###########################################################################
+    # DISPLAY ROSTER INFORMATION ON STDERR
+    #
+    # This will NOT contaminate the CSV output.
+    ###########################################################################
+
+    print "----------------------------------------" > "/dev/stderr"
+
+    print "Roster start : " start > "/dev/stderr"
+
+    print "Roster end   : " end > "/dev/stderr"
+
+    print "Roster DAYS  : " DAYS > "/dev/stderr"
+
+    print "----------------------------------------" > "/dev/stderr"
+}
+
+
+
+###############################################################################
+#
+# READ OPTIMA DATA
+#
+# Columns in assigned duties file:
+#
+#     $1  Assignment Info
+#     $2  Person
+#     $3  Duty Date
+#     $4  Allocation Work Time
+#     $5  Shift
+#
+# The supplied Optima file has ONE header row, therefore:
+#
+#     NR > 1
+#
+###############################################################################
+
+
+NR > 1 {
+
+    DOC   = $2
+
+    DATE  = $3
+
+    SHIFT = $5
+
+
+
+    ###########################################################################
+    # CONVERT DUTY DATE TO TIMESTAMP
+    ###########################################################################
+
+    duty_time = date_to_time(DATE)
+
+
+    if (duty_time < 0) {
+
+        print "WARNING: invalid date at input line " NR ": " DATE \
+              > "/dev/stderr"
+
+        next
+    }
+
+
+
+    ###########################################################################
+    # IGNORE ASSIGNMENTS OUTSIDE REQUESTED ROSTER PERIOD
+    ###########################################################################
+
+    if (duty_time < START_TIME || duty_time > END_TIME) {
+
+        next
+    }
+
+
+
+    ###########################################################################
+    # CALCULATE MINIZINC DAY NUMBER DIRECTLY FROM CALENDAR DATE
+    #
+    # Example:
+    #
+    # START = 26/10/2026
+    #
+    #     26/10/2026  -> day 1
+    #     27/10/2026  -> day 2
+    #     28/10/2026  -> day 3
+    #
+    # etc.
+    #
+    # This is the important change.
+    #
+    # We DO NOT use asorti().
+    #
+    ###########################################################################
+
+    DAY_NUMBER = int((duty_time - START_TIME) / 86400) + 1
+
+
+
+    ###########################################################################
+    # STORE THE SHIFT
+    ###########################################################################
+
+    roster[DOC, DAY_NUMBER] = SHIFT
+
+
+
+    ###########################################################################
+    # RECORD UNIQUE DOCTOR
+    ###########################################################################
+
+    all_docs[DOC] = 1
+
+
+
+    ###########################################################################
+    # CONSTRUCT SHORT DOCTOR NAME
+    #
+    # Examples:
+    #
+    #     GREGORY Mele
+    #
+    # becomes:
+    #
+    #     gmele
+    #
+    # Rebecca Marson
+    #
+    # becomes:
+    #
+    #     rmarson
+    #
+    ###########################################################################
+
+    docname = tolower(DOC)
+
+
+    split(docname, first_last, /[[:space:]]/)
+
+
+    FIRSTLAST[DOC] = substr(first_last[1], 1, 1) \
+                     substr(first_last[2], 1, 6)
+}
+
+
+
+###############################################################################
+#
+# OUTPUT
+#
+###############################################################################
+
+
+END {
+
+
+    ###########################################################################
+    # DON'T ATTEMPT OUTPUT IF BEGIN FAILED
+    ###########################################################################
+
+    if (DAYS <= 0) {
+
+        exit
+    }
+
+
+
+    ###########################################################################
+    # ONE LINE PER DOCTOR
+    ###########################################################################
+
+    for (doc in all_docs) {
+
+
+        out = FIRSTLAST[doc]
+
+
+
+        #######################################################################
+        # ONE COLUMN PER CALENDAR DAY
+        #
+        # This is now ALWAYS:
+        #
+        #     1 ...
+        #     2 ...
+        #     3 ...
+        #
+        # through DAYS.
+        #
+        # It is NOT based on which dates happened to occur in the
+        # Optima export.
+        #######################################################################
+
+        for (day = 1; day <= DAYS; day++) {
+
+
+
+            ###################################################################
+            # IF DOCTOR HAS NOTHING ON THIS DAY -> OFF
+            ###################################################################
+
+            if ((doc, day) in roster) {
+
+                shift = roster[doc, day]
+            }
+
+            else {
+
+                shift = "o"
+            }
+
+
+
+            ###################################################################
+            # EXTRACT TEXT INSIDE PARENTHESES
+            #
+            # Optima examples:
+            #
+            #     MH 0800-1800 (MH 0800-1800)
+            #
+            # becomes:
+            #
+            #     MH 0800-1800
+            #
+            # and:
+            #
+            #     0000-0800 OnCall (OnCall)
+            #
+            # becomes:
+            #
+            #     OnCall
+            #
+            ###################################################################
+
+            extracted = gensub(/.*\(([^)]*)\).*/,"\\1",1,shift)
+
+
+
+            ###################################################################
+            # TRANSLATE SHIFT TO MINIZINC CODE
+            ###################################################################
+
+            if (extracted in translate) {
+
+                code = translate[extracted]
+            }
+
+            else {
+
+                code = extracted
+            }
+
+
+
+            ###################################################################
+            # APPEND SHIFT TO OUTPUT ROW
+            ###################################################################
+
+            out = out "," code
+        }
+
+
+
+        #######################################################################
+        # PRINT COMPLETED DOCTOR ROW
+        #######################################################################
+
+        print out
+    }
+    ###########################################################################
+    # PRINT COLUMN -> CALENDAR DATE MAP TO STDERR
+    ###########################################################################
+
+    #print "" > "/dev/stderr"
+    #print "DATE / COLUMN ALIGNMENT" > "/dev/stderr"
+    #print "----------------------------------------" > "/dev/stderr"
+
+    #for (day = 1; day <= DAYS; day++) {
+
+    #    check_time = START_TIME + ((day - 1) * 86400)
+
+    #    print "day " day " = " strftime("%d/%m/%Y", check_time,1) \
+    #          > "/dev/stderr"
+    #}
+
+    #print "----------------------------------------" > "/dev/stderr"
+
+}#END
+
+
+
+###############################################################################
+#
+# FUNCTION: date_to_time
+#
+# Input:
+#
+#     DD/MM/YYYY
+#
+# Returns:
+#
+#     gawk timestamp
+#
+# We use 12:00 noon rather than midnight. This helps avoid DST
+# problems around midnight.
+#
+###############################################################################
+function date_to_time(date_str,    parts, d, m, y, t) {
+
+    if (split(date_str, parts, "/") != 3) {
+        return -1
+    }
+
+    d = parts[1] + 0
+    m = parts[2] + 0
+    y = parts[3] + 0
+
+    if (d < 1 || d > 31) {
+        return -1
+    }
+
+    if (m < 1 || m > 12) {
+        return -1
+    }
+
+    if (y < 1900) {
+        return -1
+    }
+
+    # Use midday.
+    # The final -1 tells mktime to determine DST automatically.
+    
+    t = mktime(sprintf("%04d %02d %02d 12 00 00 -1",y, m, d))
+
+    if (t < 0) {
+        return -1
+    }
+
+    return t
+}

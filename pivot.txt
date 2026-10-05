@@ -17,13 +17,21 @@ translate["CST 0800-1800"]="c"
 translate["CST 1400-1800"]="c"
 translate["CST 1400-1700"]="c"
 translate["CST 1200-1500"]="c"
-translate["CST 1200-1600"]="a"
+translate["CST 1200-1600"]="c"
+translate["CST 1200-1800"]="c"
 translate["CST 1600-1800"]="a"
+translate["CST 1700-1800"]="a"
+
+translate["CST 1000-1400"]="c"
+
 translate["MH 1400-2400"]="p"
-translate["MH 1000-2000"]="a"
+translate["MH 1000-2000"]="c"
 translate["CST 1400-1600"]="p"
-translate["MH 0800-1200"]="a"
+translate["MH 0800-1200"]="c"
 translate["MH 1600-2400"]="p"
+
+translate["MH 0800-1400"]="c"   ## ruths half shift dont code to a to avoid incharge ssu shift---
+
 translate["MH 0800-1800"]="a"
 translate["MH 0800-1600"]="a"
 translate["MH 0800-1600 IC"]="a"
@@ -45,9 +53,13 @@ translate["UA stuff"] = "po"
 translate["UP stuff"] = "ao"
 
 
+translate["AP 0000-2359"] = "o"
+translate["AA 0800-1800"] = "o"
+
+
 } 
 
-NR>2{
+NR>1{
     # 1. Collect real data from the file
     #roster[doc,day]=shift
 
@@ -106,6 +118,13 @@ END {
 #    print "num days " length(all_days)
 
 #    for(i=1;i<=length(sorted_days);i++) print sorted_days[i]
+
+## catch an error
+print "NUMBER OF DATES = "
+for (i=1; i<=n; i++) {
+print i, sorted_days[i] 
+}
+
 
 } #END
 

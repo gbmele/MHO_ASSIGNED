@@ -63,7 +63,7 @@ END{
 
 	printf ("int: DAYS = %s ; \n" , NUM_DAYS)
 
-	print "enum shifts =   {o,a,p,c,l,s,i,erl,al,cl,lsl,mat,pat,lwop,sab,phnw,apo ,x ,oc,u,ua,up,ap,}; \n"
+	print "enum shifts =   {o,a,p,c,l,s,i,erl,al,cl,lsl,mat,pat,lwop,sab,phnw,apo ,x ,oc,u,ua,up,ap,ao,po}; \n"
 
 	enum ="enum docs = {"
 	for(doc in DOCS){
@@ -162,21 +162,20 @@ print "% TARGETS    \n"
 print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
  
 print "constraint forall(d in docs)(    \n"
-print "n_s[d] <= target_s[d]);    \n"
+print "n_s[d] <= target_s[d] /\\ n_s[d] >= min_s[d] );    \n"
  
 print "constraint forall(d in docs)(    \n"
-print "n_i[d] <= target_i[d]    \n"
-print ");    \n"
+print "n_i[d] <= target_i[d] /\\ n_i[d] >=min_i[d] );   \n"
+
  
 print "constraint forall(d in docs)(    \n"
-print "n_oc[d] <= target_oc[d]  /\\ n_oc[d] >=min_oc[d]  \n"
-print ");    \n"
+print "n_oc[d] <= target_oc[d]  /\\ n_oc[d] >=min_oc[d] ); \n\n"
 
 print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
 print "% NO MORE THAN ONE OC IN ANY min_oc_gap DAY WINDOW    \n"
 print "%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    \n"
 print "     \n"
-print "int: min_oc_gap=14;    \n"
+print "int: min_oc_gap=9;    \n"
 print "constraint    \n"
 print "forall(d in docs, day in 1..DAYS-min_oc_gap+1)(    \n"
 print "sum(k in day..day+min_oc_gap-1)(    \n"
@@ -219,7 +218,7 @@ print "output[\"\\n\\n\"];  \n"
 
 
 
-#print "output[\"\\nINCHARGE\\n\"];  \n"
+print "output[\"\\nINCHARGE\\n\"];  \n"
 
 print "output [  \n"
    
@@ -228,7 +227,7 @@ print "show([d | d in docs where fix(inc[d,day]) = true]) ++\",\" | day in 1..DA
 print "output[\"\\n\\n\"];  \n"
 
 
-#print "output[\"\\nONCALL\\n\"];  \n"
+print "output[\"\\nONCALL\\n\"];  \n"
 
 print "output [  \n"
    
@@ -269,14 +268,20 @@ printf "  ];     \n"
 
 
 #### this is the SSIIICC counts
-printf "predicate set_SIC(docs:doc,int:S,int:I,int:OC_min,int:OC_max)= \n"
-printf "  (target_s[doc]= S /\\ target_i[doc] = I /\\ min_oc[doc]=OC_min /\\ target_oc[doc]=OC_max); \n\n\n"
+#printf "predicate set_SIC(docs:doc,int:S,int:I,int:OC_min,int:OC_max)= \n"
+#printf "  (target_s[doc]= S /\\ target_i[doc] = I /\\ min_oc[doc]=OC_min /\\ target_oc[doc]=OC_max); \n\n\n"
   
+printf "predicate set_SIC(docs:doc,int:minS,int:S,int:minI,int:I,int:OC_min,int:OC_max)= \n"
+printf "  (min_s[doc]=minS /\\ target_s[doc]= S /\\ min_i[doc]=minI /\\ target_i[doc] = I /\\ min_oc[doc]=OC_min /\\ target_oc[doc]=OC_max); \n" 
+
+printf "\n\n\n"
 
 
+
+printf "#include \"SIC_FAIRNESS.mzn\"; \n\n"
 for(doc in DOCS){
 
-	printf("constraint set_SIC(%s,5,5,0,5); \n",doc)
+	printf("constraint set_SIC(%s,0,3, 0,3, 0,3); \n",doc)
 
 
 }
