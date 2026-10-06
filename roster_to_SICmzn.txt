@@ -278,7 +278,7 @@ printf "\n\n\n"
 
 
 
-printf "#include \"SIC_FAIRNESS.mzn\"; \n\n"
+printf "%include \"SIC_FAIRNESS.mzn\"; \n\n"
 for(doc in DOCS){
 
 	printf("constraint set_SIC(%s,0,3, 0,3, 0,3); \n",doc)
