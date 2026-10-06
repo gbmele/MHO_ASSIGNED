@@ -1,0 +1,269 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% DEPARTMENTAL ALLOCATION LAYER
+%
+% roster / R describes the underlying roster state
+% alloc describes the actual departmental allocation
+%
+% ROSTER STATES USED HERE
+%
+%   a   = rostered AM
+%   p   = rostered PM
+%   c   = rostered C
+%
+%   o   = open / available
+%
+%   ap  = may be allocated AM or PM, or remain unallocated
+%
+%   u   = completely unavailable
+%   ua  = unavailable AM
+%   up  = unavailable PM
+%
+%
+% ALLOCATION STATES
+%
+%   AM
+%   PM
+%   C
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+enum ALLOC = { AM, PM, C };
+array[docs,days,ALLOC] of var 0..1: alloc;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ONE ALLOCATION PER DOCTOR PER DAY
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+constraint forall(doc in docs, day in days)(
+      alloc[doc,day,AM]
+    + alloc[doc,day,PM]
+    + alloc[doc,day,C]
+    <= 1
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% CHANNEL ROSTER -> ALLOCATION
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+constraint forall(doc in docs, day in days)(
+    R[doc,day,a] <= alloc[doc,day,AM]
+    /\
+    alloc[doc,day,AM] <= R[doc,day,a] + R[doc,day,o] + R[doc,day,ap]
+    /\
+    R[doc,day,p] <= alloc[doc,day,PM]
+    /\
+    alloc[doc,day,PM] <= R[doc,day,p] + R[doc,day,o] + R[doc,day,ap]
+    /\
+    R[doc,day,c] <= alloc[doc,day,C]
+    /\
+    alloc[doc,day,C] <= R[doc,day,c]
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% UNAVAILABILITY CHANNELING
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+constraint forall(doc in docs, day in days)(
+      R[doc,day,u]
+    + alloc[doc,day,AM]
+    + alloc[doc,day,PM]
+    + alloc[doc,day,C]
+    <= 1
+    /\
+      R[doc,day,ua] + alloc[doc,day,AM] <= 1
+    /\
+      R[doc,day,up] + alloc[doc,day,PM] <= 1
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TOTAL COUNTS BY DOCTOR
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+array[docs] of var 0..DAYS: n_am;
+array[docs] of var 0..DAYS: n_pm;
+array[docs] of var 0..DAYS: n_c;
+
+constraint forall(doc in docs)(
+    n_am[doc] = sum(day in days)(alloc[doc,day,AM])
+    /\
+    n_pm[doc] = sum(day in days)(alloc[doc,day,PM])
+    /\
+    n_c[doc] = sum(day in days)(alloc[doc,day,C])
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% PM COUNTS BY WEEKDAY
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+array[docs] of var 0..DAYS: n_mon_pm;
+array[docs] of var 0..DAYS: n_tue_pm;
+array[docs] of var 0..DAYS: n_wed_pm;
+array[docs] of var 0..DAYS: n_thu_pm;
+array[docs] of var 0..DAYS: n_fri_pm;
+
+constraint forall(doc in docs)(
+    n_mon_pm[doc] = sum(day in days where day mod 7 = 1)(alloc[doc,day,PM])
+    /\
+    n_tue_pm[doc] = sum(day in days where day mod 7 = 2)(alloc[doc,day,PM])
+    /\
+    n_wed_pm[doc] = sum(day in days where day mod 7 = 3)(alloc[doc,day,PM])
+    /\
+    n_thu_pm[doc] = sum(day in days where day mod 7 = 4)(alloc[doc,day,PM])
+    /\
+    n_fri_pm[doc] = sum(day in days where day mod 7 = 5)(alloc[doc,day,PM])
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% WEEKEND COUNTS BY DOCTOR
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+array[docs] of var 0..DAYS: n_sat_am;
+array[docs] of var 0..DAYS: n_sat_pm;
+array[docs] of var 0..DAYS: n_sun_am;
+array[docs] of var 0..DAYS: n_sun_pm;
+
+constraint forall(doc in docs)(
+    n_sat_am[doc] = sum(day in days where day mod 7 = 6)(alloc[doc,day,AM])
+    /\
+    n_sat_pm[doc] = sum(day in days where day mod 7 = 6)(alloc[doc,day,PM])
+    /\
+    n_sun_am[doc] = sum(day in days where day mod 7 = 0)(alloc[doc,day,AM])
+    /\
+    n_sun_pm[doc] = sum(day in days where day mod 7 = 0)(alloc[doc,day,PM])
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% COVERAGE PARAMETERS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+int: mon_am_min; int: mon_am_max;
+int: mon_pm_min; int: mon_pm_max;
+int: mon_c_min;  int: mon_c_max;
+
+int: tue_am_min; int: tue_am_max;
+int: tue_pm_min; int: tue_pm_max;
+int: tue_c_min;  int: tue_c_max;
+
+int: wed_am_min; int: wed_am_max;
+int: wed_pm_min; int: wed_pm_max;
+int: wed_c_min;  int: wed_c_max;
+
+int: thu_am_min; int: thu_am_max;
+int: thu_pm_min; int: thu_pm_max;
+int: thu_c_min;  int: thu_c_max;
+
+int: fri_am_min; int: fri_am_max;
+int: fri_pm_min; int: fri_pm_max;
+int: fri_c_min;  int: fri_c_max;
+
+int: sat_am_min; int: sat_am_max;
+int: sat_pm_min; int: sat_pm_max;
+
+int: sun_am_min; int: sun_am_max;
+int: sun_pm_min; int: sun_pm_max;
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% MONDAY COVERAGE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+constraint forall(day in days where day mod 7 = 1)(
+    sum(doc in docs)(alloc[doc,day,AM]) >= mon_am_min /\
+    sum(doc in docs)(alloc[doc,day,AM]) <= mon_am_max /\
+    sum(doc in docs)(alloc[doc,day,PM]) >= mon_pm_min /\
+    sum(doc in docs)(alloc[doc,day,PM]) <= mon_pm_max /\
+    sum(doc in docs)(alloc[doc,day,C])  >= mon_c_min /\
+    sum(doc in docs)(alloc[doc,day,C])  <= mon_c_max
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% TUESDAY COVERAGE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+constraint forall(day in days where day mod 7 = 2)(
+    sum(doc in docs)(alloc[doc,day,AM]) >= tue_am_min /\
+    sum(doc in docs)(alloc[doc,day,AM]) <= tue_am_max /\
+    sum(doc in docs)(alloc[doc,day,PM]) >= tue_pm_min /\
+    sum(doc in docs)(alloc[doc,day,PM]) <= tue_pm_max /\
+    sum(doc in docs)(alloc[doc,day,C])  >= tue_c_min /\
+    sum(doc in docs)(alloc[doc,day,C])  <= tue_c_max
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% WEDNESDAY COVERAGE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+constraint forall(day in days where day mod 7 = 3)(
+    sum(doc in docs)(alloc[doc,day,AM]) >= wed_am_min /\
+    sum(doc in docs)(alloc[doc,day,AM]) <= wed_am_max /\
+    sum(doc in docs)(alloc[doc,day,PM]) >= wed_pm_min /\
+    sum(doc in docs)(alloc[doc,day,PM]) <= wed_pm_max /\
+    sum(doc in docs)(alloc[doc,day,C])  >= wed_c_min /\
+    sum(doc in docs)(alloc[doc,day,C])  <= wed_c_max
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% THURSDAY COVERAGE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+constraint forall(day in days where day mod 7 = 4)(
+    sum(doc in docs)(alloc[doc,day,AM]) >= thu_am_min /\
+    sum(doc in docs)(alloc[doc,day,AM]) <= thu_am_max /\
+    sum(doc in docs)(alloc[doc,day,PM]) >= thu_pm_min /\
+    sum(doc in docs)(alloc[doc,day,PM]) <= thu_pm_max /\
+    sum(doc in docs)(alloc[doc,day,C])  >= thu_c_min /\
+    sum(doc in docs)(alloc[doc,day,C])  <= thu_c_max
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% FRIDAY COVERAGE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+constraint forall(day in days where day mod 7 = 5)(
+    sum(doc in docs)(alloc[doc,day,AM]) >= fri_am_min /\
+    sum(doc in docs)(alloc[doc,day,AM]) <= fri_am_max /\
+    sum(doc in docs)(alloc[doc,day,PM]) >= fri_pm_min /\
+    sum(doc in docs)(alloc[doc,day,PM]) <= fri_pm_max /\
+    sum(doc in docs)(alloc[doc,day,C])  >= fri_c_min /\
+    sum(doc in docs)(alloc[doc,day,C])  <= fri_c_max
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SATURDAY COVERAGE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+constraint forall(day in days where day mod 7 = 6)(
+    sum(doc in docs)(alloc[doc,day,AM]) >= sat_am_min /\
+    sum(doc in docs)(alloc[doc,day,AM]) <= sat_am_max /\
+    sum(doc in docs)(alloc[doc,day,PM]) >= sat_pm_min /\
+    sum(doc in docs)(alloc[doc,day,PM]) <= sat_pm_max
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% SUNDAY COVERAGE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+constraint forall(day in days where day mod 7 = 0)(
+    sum(doc in docs)(alloc[doc,day,AM]) >= sun_am_min /\
+    sum(doc in docs)(alloc[doc,day,AM]) <= sun_am_max /\
+    sum(doc in docs)(alloc[doc,day,PM]) >= sun_pm_min /\
+    sum(doc in docs)(alloc[doc,day,PM]) <= sun_pm_max
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% PREVENT C ALLOCATION ON WEEKENDS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+constraint forall(
+    doc in docs,
+    day in days
+    where day mod 7 = 6 \/ day mod 7 = 0
+)(
+    alloc[doc,day,C] = 0
+);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% STRUCTURAL SUMMARY
+%
+% roster / R
+%     |
+%     v
+% CHANNEL
+%     |
+%     v
+% alloc[doc,day,AM/PM/C]
+%     |
+%     +---- coverage DOWN across doctors
+%     |
+%     +---- counts ACROSS days for each doctor
+%     |
+%     +---- patterns
+%     |
+%     +---- exceptions
+%     |
+%     +---- optimisation
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
