@@ -267,3 +267,25 @@ constraint forall(
 %     |
 %     +---- optimisation
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+OUTPUT
+
+output [
+	show(doc) ++ "," ++
+concat([
+	if     fix(alloc[doc,day,AM]) = 1 then "a,"
+	elseif fix(alloc[doc,day,PM]) = 1 then "p,"
+	elseif fix(alloc[doc,day,C])  = 1 then "c,"
+	else   "o,"
+	endif
+		| day in days]
+	) ++ "\n"
+	| doc in docs
+	];
+
+
+
+
+
+
