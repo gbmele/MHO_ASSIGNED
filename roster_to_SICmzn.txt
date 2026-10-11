@@ -1,3 +1,14 @@
+#USAGE takes output in form of doc,s,s,s,s,s etc and makes basic mzn file
+#	gawk -f data.file roster_to_SICmzn.txt 
+#       by itself it can take a complete roster and allocate SIC for each doctor.
+# 	include allocations file where all the other work can be done for a minimal roster input...
+
+
+#11/10
+#	added %include ALLOCATIONS.mzn; to second line of output.	
+#	fixed shifts co apoc etc etc
+#       
+
 ## 4/10/26 created MHO_ASSIGNED folder
 ## usage takes output of pivot.txt ---- doc1,shift,shift,shift,shift,shift
 ##                                      doc2,shift,shift,shift,shift,shift
@@ -58,18 +69,20 @@ NR < 1000{
 END{
 
 
-        print "include \"globals.mzn\" ;           \n"
+        print "include \"globals.mzn\" ;             \n"
+        print "% include \"ALLOCATIONS.mzn\" ;       \n"
 	print "% include \"global_calendar.mzn\"  ;  \n"
 
 	printf ("int: DAYS = %s ; \n" , NUM_DAYS)
 
-	print "enum shifts =   {o,a,p,c,l,s,i,erl,al,cl,lsl,mat,pat,lwop,sab,phnw,apo ,x ,oc,u,ua,up,ap,ao,po}; \n"
+	print "enum shifts =   {o,a,p,c,l,s,i,erl,al,cl,lsl,mat,pat,lwop,sab,phnw,apo ,x ,oc,u,ua,up,ap,ao,po,co,apoc,aco}; \n"
 
 	enum ="enum docs = {"
 	for(doc in DOCS){
 
 		enum = enum doc ","	
 	}
+        enum = enum "TESTDOC"
 	enum = enum "} ;\n"
 	print enum
 
