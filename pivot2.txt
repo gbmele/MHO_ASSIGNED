@@ -1,9 +1,15 @@
+# last 13/10/2026
 ###############################################################################
 # pivot2.txt
 #
 # Converts Optima Assigned Duties export into:
 #
+#  at the moment i am hardwiring fields #2                   #3                 #5 --- 
+# optima field names                   PERSON,             DATE,             SHIFT 
+#                                    surname firstname    DD/MM/YYYY     CST 1600-1700(CST 1600-1700)    
 #     doc,shift,shift,shift,...
+#
+#     future-job---> get fields like fields_mzn 
 #
 # Each shift column corresponds to ONE CONSECUTIVE CALENDAR DAY.
 #
@@ -292,14 +298,37 @@ NR > 1 {
     #
     ###########################################################################
 
+#8/10/26
+# this commented out needed to fix Mc Carthy !!!!
+#    docname = tolower(DOC)
+#
+#
+#    split(docname, first_last, /[[:space:]]/)
+##
+#
+#    FIRSTLAST[DOC] = substr(first_last[1], 1, 1) \
+#                     substr(first_last[2], 1, 6)
+#
+#8/10/26
+
     docname = tolower(DOC)
 
+    # First word is the first name
+    split(docname, nameparts, /[[:space:]]+/)
+    first_initial = substr(nameparts[1], 1, 1)
 
-    split(docname, first_last, /[[:space:]]/)
+    # Everything after the first name is the surname
+    surname = docname
+    sub(/^[^[:space:]]+[[:space:]]+/, "", surname)
+
+    # Remove spaces, hyphens, apostrophes, etc. from surname
+    gsub(/[^[:alpha:]]/, "", surname)
+
+    # First initial + first six surname letters
+    FIRSTLAST[DOC] = first_initial substr(surname, 1, 6)
 
 
-    FIRSTLAST[DOC] = substr(first_last[1], 1, 1) \
-                     substr(first_last[2], 1, 6)
+
 }
 
 
