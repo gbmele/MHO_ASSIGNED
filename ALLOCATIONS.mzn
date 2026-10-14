@@ -143,6 +143,9 @@ constraint forall(doc in docs, day in days)(
        + R[doc,day,o]
 
 );
+
+
+
 /*
 constraint forall(doc in docs, day in days)(
     R[doc,day,a] <= alloc[doc,day,AM]
@@ -895,7 +898,19 @@ predicate no_monday_after_sunday(docs: doc) =
       + alloc[doc,day+1,PM]
         <= 1
     );
+predicate no_friday_before_saturday(docs: doc) =
 
+    forall(day in days
+           where day mod 7 = 5
+             /\ day < max(days)) (
+
+        alloc[doc,day,AM]
+      + alloc[doc,day,PM]
+      + alloc[doc,day+1,AM]
+      + alloc[doc,day+1,PM]
+
+        <= 1
+    );
 predicate no_saturday_after_friday(docs: doc) =
     forall(day in days
            where day mod 7 = 5
@@ -973,88 +988,72 @@ predicate no_four_ams(docs: doc) =
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%  (alloc_template14(TESTDOC,[apoc,apoc,apoc,apoc,apoc,apo,apo,
-%                             apoc,apoc,apoc,apoc,apoc,apo,apo]) /\
+include "ALLOCATIONS_MH.mzn";
 
-
-
-%constraint alloc_template14(TESTDOC, test_template);
-
-predicate test_amrita() =
-  (alloc_template14(TESTDOC,[apoc,apoc,apoc,apoc,apo,apo,apo,
+predicate test_amrita(docs:D) =
+  (alloc_template14(D,[apoc,apoc,apoc,apoc,apo,apo,apo,
                             apoc,apoc,apoc,apoc,apo,apo,apo]) /\
                   
-                   leave_weeks(TESTDOC,{4,7,8})     /\
-                   apc_per_week_la(TESTDOC,1,1,1) /\
-                   assign_weekends(TESTDOC,1,1,1,1) /\
-                   no_split_weekends(TESTDOC) /\ no_consec_weekends(TESTDOC) /\
-                   no_weekend_before_leave(TESTDOC) /\
-                   n_fri_pm[TESTDOC] in 2..3        /\
-                   no_three_pms(TESTDOC));
+                   leave_weeks(D,{})     /\
+                   shifts_per_fortnight(D,6) /\
+                   c_per_week_la(D,1) /\ p_per_week_la(D,1) /\ a_per_week_range_la(D,0,1)  /\
+                   assign_weekends(D,1,1,1,1) /\
+                   no_split_weekends(D) /\ no_consec_weekends(D) /\
+                   %no_weekend_before_leave(D) /\
+                   n_fri_pm[D] in 2..2        /\
+                   no_three_pms(D));
 
-predicate test_greg_nathan() =
-  (alloc_template14(TESTDOC,[po,o,po,co,o,po,o,
-                             po,o,po,co,o,po,o])    /\
-                   c_per_week_la(TESTDOC,1)  /\   %%fix this
-                   p_per_week_la(TESTDOC,2)   /\
-                   leave_weeks(TESTDOC,{2})         /\
-                   every_saturday(TESTDOC));
+predicate test_greg_nathan(docs:D) =
+  (alloc_template14(D,[po,o,po,co,o,po,o,
+                       po,o,po,co,o,po,o])    /\
+                   c_per_week_la(D,1)  /\ 
+                   p_per_week_la(D,2)   /\
+                   every_saturday(D));
                    
-predicate test_martin_lew() =
-  (alloc_template14(TESTDOC,[o,o,ao,aco,o,o,apo,
-                             o,o,ao,aco,o,o,apo])    /\
-                   a_per_week_range_la(TESTDOC,1,2) /\
-                   leave_days(TESTDOC,{3,7}) /\
-%%                   leave_weeks(TESTDOC,{4,6})         /\
-                   %every_sunday(TESTDOC)         /\   %%every sunday is must work every sunday and this is leave aware
-                   n_sun_am[TESTDOC] in 3..5  ); 
+predicate test_martin_lew(docs:D) =
+  (alloc_template14(D,[o,o,ao,ao,o,o,apo,
+                       o,o,ao,ao,o,o,apo])    /\
+                   a_per_week_range_la(D,2,2) /\
+                   leave_days(D,{})           /\
+                    every_sunday(D)           %%every sunday is must work every sunday and this is leave aware
+); 
 
-predicate test_teresa() =
-  (alloc_template14(TESTDOC,[apo,ao,co,apo,apo,apo,apo,
+predicate test_teresa(docs:D) =
+  (alloc_template14(D,[apo,ao,co,apo,apo,apo,apo,
                              apo,ao,co,apo,apo,apo,apo]) /\
                   
-                   leave_weeks(TESTDOC,{4,7,8})     /\
-                   apc_per_week_la(TESTDOC,1,1,1) /\
-                   assign_weekends(TESTDOC,1,1,1,1) /\
-                   no_split_weekends(TESTDOC) /\ no_consec_weekends(TESTDOC) /\
-                   no_weekend_before_leave(TESTDOC) /\
-                   n_fri_pm[TESTDOC] in 2..3 /\
-                   no_three_pms(TESTDOC));
+                   leave_weeks(TESTDOC,{D})     /\
+                   apc_per_week_la(D,1,1,1) /\
+                   assign_weekends(D,1,1,1,1) /\
+                   no_split_weekends(D) /\ no_consec_weekends(D) /\
+                   no_weekend_before_leave(D) /\
+                   n_fri_pm[D] in 2..3 /\
+                   no_three_pms(D));
 
-predicate test_thu_or_sat() =
-  %% good for yas
-  (alloc_template14(TESTDOC,[o,o,o,apo,o,apo,o,
-                             o,o,o,apo,o,apo,o]) /\
-                   shifts_per_week_la(TESTDOC,1)   /\
-                   n_sat_pm[TESTDOC] in 4..5        /\
-                   leave_weeks(TESTDOC,{2,6}));
                    
-predicate test_brendon() =
-  (alloc_template14(TESTDOC,[o,o,o,po,o,po,o,
+predicate test_brendon(docs:D) =
+  (alloc_template14(D,[o,o,o,po,o,po,o,
                              o,o,o,po,o,po,o]) /\
-                   shifts_per_week_la(TESTDOC,1)   /\
-                   leave_weeks(TESTDOC,{2,6}));
+                   shifts_per_week_la(D,1)
+   );
 
-%%%stsart again at fulltimers.....
- 
-%% essentially a fulltimer
-%% 2a1p1c
-predicate test_rm() =
-    (alloc_template14(TESTDOC,[ao,apo,co,ao,apo,ao,ao,
+predicate test_rm(docs:D) =
+    (alloc_template14(D,[ao,apo,co,ao,apo,ao,ao,
                                ao,apo,co,ao,apo,ao,ao]) /\
  
-    leave_weeks(TESTDOC,{3,4})  /\
-    shifts_per_fortnight_la(TESTDOC,8) /\
-    assign_weekends(TESTDOC,2,0,2,0) /\
-    no_split_weekends(TESTDOC) /\ 
-    no_consec_weekends(TESTDOC) /\
-    no_monday_after_sunday(TESTDOC) /\
-    p_per_week_la(TESTDOC,1) /\
-    c_per_week_la(TESTDOC,1) /\
-    a_per_week_range_la(TESTDOC,1,2) /\
-    n_fri_pm[TESTDOC]=2
+    leave_weeks(D,{})  /\
+    shifts_per_fortnight_la(D,8) /\
+    assign_weekends(D,2,0,2,0) /\
+    no_split_weekends(D) /\ 
+    no_consec_weekends(D) /\
+    no_monday_after_sunday(D) /\
+    no_friday_before_saturday(D) /\
+    p_per_week_la(D,1) /\   
+    c_per_week_la(D,1) /\
+    a_per_week_range_la(D,1,2) /\
+    n_fri_pm[D]=2
     );
-
+ 
 %% min fulltiemr splits weekends intially hard now good 2a1pic
 predicate test_min() =
     (alloc_template14(TESTDOC,[ao,ao,apo,co,apo,apo,apo,
@@ -1203,6 +1202,25 @@ predicate test_sk() =
     %  (alloc[TESTDOC,day,AM] + alloc[TESTDOC,day,PM] = 0))
 );
 
+predicate test_damien() =
+    (alloc_template14(TESTDOC,[o,o,ao,o,po,po,o,
+                               o,o,ao,o,po,po,o]) /\
+    leave_days(TESTDOC,{}) /\
+    p_per_week_la(TESTDOC,1) /\
+    a_per_week_range_la(TESTDOC,0,1) /\
+    assign_weekends(TESTDOC,0,4,0,0) /\
+    forall(day in days where day mod 7 = 6 /\ day + 7 <= max(days))
+      ( alloc[TESTDOC,day,PM]  + alloc[TESTDOC,day+7,PM] <=1  /\ alloc[TESTDOC,day-3,AM] + alloc[TESTDOC,day,PM] <=1    ) /\
+    shifts_per_fortnight(TESTDOC,4)
+    );
+
+predicate test_thu_or_sat() =
+  %% good for yas
+  (alloc_template14(TESTDOC,[o,o,o,apo,o,apo,o,
+                             o,o,o,apo,o,apo,o]) /\
+                   shifts_per_week_la(TESTDOC,1)   /\
+                   n_sat_pm[TESTDOC] in 4..5        /\
+                   leave_weeks(TESTDOC,{2,6}));
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1224,7 +1242,12 @@ predicate test_sk() =
 %constraint test_ck();
 %constraint test_kimson();
 %constraint test_jannet();
-constraint test_sk();
+
+%constraint test_sk();
+%constraint test_damien();
+
+%%include "ALLOCATIONS_MH.mzn";
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% leave type predicats for testing
 %% use one or the other   cant use both in testing ONLY IN TESTING
@@ -1234,7 +1257,8 @@ predicate leave_days(docs: doc,set of int: leave_set) =
     /\
     forall(day in days diff leave_set)(roster[doc,day,o]=1))
 ;
-        
+
+/*                
 predicate leave_weeks(docs: doc,set of int: weeks_off) =
 
     forall(day in days)(
@@ -1244,8 +1268,13 @@ predicate leave_weeks(docs: doc,set of int: weeks_off) =
             roster[doc,day,o] = 1
         endif
     );
+*/
+predicate leave_weeks(docs: doc,set of int: weeks_off) =
 
-
+    forall(day in days where ((day-1) div 7 + 1) in weeks_off)(
+        roster[doc,day,l] = 1
+    );
+    
 %% leave aware code
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 predicate p_per_week_la(docs: doc, int: P) =
@@ -1515,9 +1544,9 @@ var int: total_pm_shortfall =
 %%_______________________________________________________
 %%_______________________________________________________
 
-solve minimize
-    1000 * total_am_shortfall
-  + 1000 * total_pm_shortfall;
+%solve minimize
+%    1000 * total_am_shortfall
+%  + 1000 * total_pm_shortfall;
   
 %%-----------------------------------------------------
 %%-----------------END SOLVE  -------------------------  
@@ -1526,6 +1555,7 @@ solve minimize
 %%-----------------------------------------------------
 %%-----------------ALLOC SIC from alloc----------------  
 %%-----------------------------------------------------
+
 
 
 %%-----------------------------------------------------
@@ -1592,4 +1622,22 @@ output [
 
   where fix(am_shortfall[day]) > 0
      \/ fix(pm_shortfall[day]) > 0
+];
+
+function string: alloc_symbol(docs: d, int: day) =
+    if fix(alloc[d,day,AM]) = 1 then "a,"
+    elseif fix(alloc[d,day,PM]) = 1 then "p,"
+    elseif fix(alloc[d,day,C]) = 1 then "c,"
+    elseif fix(roster[d,day,l]) = 1 then "L,"
+    else "o,"
+    endif;
+
+
+output
+[
+    show(d) ++ ","
+    ++ concat([alloc_symbol(d,day) ++ if day mod 7 = 0 then "|" else "" endif ++ if day mod 14 = 0 then "|" else "" endif
+              | day in days])
+    ++ "\n"
+    | d in docs
 ];
