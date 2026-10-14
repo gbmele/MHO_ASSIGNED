@@ -1,0 +1,192 @@
+# leave_to_mzn.awk
+#
+# Usage:
+#
+# gawk -v start="09/28/2026" -v end="10/25/2026" \
+#      -f leave_to_mzn.awk leave_list.tsv > leave.mzn
+#
+# Input:
+# TAB-delimited file with headers including:
+#
+# Surname    First Name    Start    Finish
+#
+# Doctor ID:
+# first initial + first 6 characters of surname, lowercase
+#
+# e.g.
+# Gregory Mele       -> gmele
+# Carlos Cobelas     -> ccobela
+# Andrew Rosengarten -> aroseng
+#
+# Output:
+# constraint roster[gmele,1,l]=1;
+# constraint roster[gmele,2,l]=1;
+# ...
+
+
+BEGIN {
+    FS = "\t"
+    OFS = ""
+
+    start_sec = date2sec(start)
+    end_sec   = date2sec(end)
+
+    if (start_sec < 0 || end_sec < 0 || end_sec < start_sec) {
+        print "ERROR: invalid -v start / -v end dates" > "/dev/stderr"
+        exit 1
+    }
+
+    maxdays = int((end_sec - start_sec) / 86400) + 1
+}
+
+
+# ------------------------------------------------------------
+# READ HEADER AND IDENTIFY COLUMNS
+# ------------------------------------------------------------
+NR == 1 {
+for (i = 1; i <= NF; i++) {
+# Remove carriage return
+gsub(/\r/, "", $i)
+# Remove surrounding ordinary spaces
+gsub(/^ +| +$/, "", $i)
+header = tolower($i)
+if (header == "surname") surname_col = i
+
+if (header == "first name") firstname_col = i
+
+if (header == "start") start_col = i
+
+if (header == "finish") finish_col = i
+}
+
+if (!surname_col || !firstname_col || !start_col || !finish_col) {
+print "ERROR: required columns not found" > "/dev/stderr"
+print "Fields actually found:" > "/dev/stderr"
+
+for (i = 1; i <= NF; i++)
+	print i ": [" $i "]" > "/dev/stderr"
+	exit 1
+}
+next
+}
+
+
+# ------------------------------------------------------------
+# PROCESS EACH LEAVE RECORD
+# ------------------------------------------------------------
+
+{
+    surname   = $surname_col
+    firstname = $firstname_col
+    leave_start  = $start_col
+    leave_finish = $finish_col
+
+    gsub(/\r/, "", surname)
+    gsub(/\r/, "", firstname)
+    gsub(/\r/, "", leave_start)
+    gsub(/\r/, "", leave_finish)
+
+
+    # --------------------------------------------------------
+    # CREATE DOCTOR ID
+    #
+    # first initial + first 6 characters of surname
+    # --------------------------------------------------------
+
+    clean_surname = surname
+
+    # Keep letters only
+    gsub(/[^[:alpha:]]/, "", clean_surname)
+
+    doc = tolower(substr(firstname, 1, 1) substr(clean_surname, 1, 6))
+
+    # --------------------------------------------------------
+    # CONVERT LEAVE DATES
+    # --------------------------------------------------------
+
+    leave_start_sec  = date2sec(leave_start)
+    leave_finish_sec = date2sec(leave_finish)
+
+    if (leave_start_sec < 0 || leave_finish_sec < 0)
+        next
+
+
+    # --------------------------------------------------------
+    # IGNORE LEAVE COMPLETELY OUTSIDE ROSTER PERIOD
+    # --------------------------------------------------------
+
+    if (leave_finish_sec < start_sec || leave_start_sec > end_sec)
+        next
+
+
+    # --------------------------------------------------------
+    # CLAMP LEAVE TO ROSTER PERIOD
+    # --------------------------------------------------------
+
+    if (leave_start_sec < start_sec)
+        leave_start_sec = start_sec
+
+    if (leave_finish_sec > end_sec)
+        leave_finish_sec = end_sec
+
+
+    # --------------------------------------------------------
+    # CONVERT CALENDAR DATES TO MINIZINC DAY NUMBERS
+    #
+    # roster start date = day 1
+    # --------------------------------------------------------
+
+    first_day = int((leave_start_sec - start_sec) / 86400) + 1
+
+    last_day = int((leave_finish_sec - start_sec) / 86400) + 1
+
+
+    # --------------------------------------------------------
+    # OUTPUT ONE CONSTRAINT FOR EACH LEAVE DAY
+    #
+    # seen[] prevents duplicate constraints if leave records
+    # overlap for the same doctor.
+    # --------------------------------------------------------
+
+    for (day = first_day; day <= last_day; day++) {
+
+        key = doc SUBSEP day
+
+        if (!(key in seen)) {
+
+            print "constraint roster[" doc "," day ",l]=1;"
+
+            seen[key] = 1
+        }
+    }
+}
+
+
+# ------------------------------------------------------------
+# DATE CONVERSION
+#
+# Accepts:
+#
+# MM/DD/YYYY
+#
+# or
+#
+# MM/DD/YYYY HH:MM:SS
+#
+# The time component is deliberately ignored.
+# Noon is used for the calculation to reduce problems around
+# daylight-saving transitions.
+# ------------------------------------------------------------
+
+function date2sec(s, parts, d, n) {
+# Remove CR if present
+gsub(/\r/, "", s)
+# Remove time: "09/28/2026 07:00:00" -> "09/28/2026"
+split(s, parts, " ")
+# Split date into month/day/year
+n = split(parts[1], d, "/")
+
+if (n != 3)
+	return -1
+return mktime(sprintf("%04d %02d %02d 12 00 00",d[3],d[2],d[1]))
+}
