@@ -28,6 +28,7 @@ BEGIN{
 	sat = 6
 	sun = 0
 
+	LEAVEFILE="current_leave.txt"
 }
 
 NR < 1000{
@@ -305,20 +306,51 @@ for(doc in DOCS){
 
 
 	## JUST THE DATA COMING OUT BELOW
-	for(doc in DOCS){
-
-		for(i=1;i<=NUM_DAYS;i++){
-
+#	for(doc in DOCS){
+#
+#		for(i=1;i<=NUM_DAYS;i++){
+#
 #			print doc " " i " " roster[doc,i]
-			printf ("constraint roster[%s,%s,%s] = 1 ; \n",doc,i,roster[doc,i])
-		}		
+#                        #
+#			#if(roster[doc,i]=="o") printf ("constraint roster[%s,%s,%s] in 0..1 ; \n",doc,i,roster[doc,i])
+#			#else
+#			
+#			printf ("constraint roster[%s,%s,%s] = 1 ; \n",doc,i,roster[doc,i])
+#		}		
+#
+#	} #for
+#	
 
-	} #for
+	load_leave()
+
+
+	    for(doc in DOCS){
 	
-	
+        	for(i=1;i<=NUM_DAYS;i++){
 
+	            if ((doc SUBSEP i) in LEAVE)
+        	        shift = LEAVE[doc SUBSEP i]
+            	else
+                	shift = roster[doc,i]
 
+	            printf("constraint roster[%s,%d,%s] = 1 ;\n",doc,i,shift)
+        	}
+    	     }
 
 
 
 } #END
+
+function load_leave(    doc,day,sh)
+{
+    while ((getline < LEAVEFILE) > 0)
+    {
+        doc = $1
+        day = $2
+        sh  = $3
+
+        LEAVE[doc,day] = sh
+    }
+
+    close(LEAVEFILE)
+}

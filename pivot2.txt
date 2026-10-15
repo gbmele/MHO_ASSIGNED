@@ -1,5 +1,4 @@
-# last 14/10/2026
-    ## added roster_zero.txt output --> doc,o,o,o,o,o,o,o,o,o,o,o to help with testing
+# last 13/10/2026
 ###############################################################################
 # pivot2.txt
 #
@@ -359,14 +358,12 @@ END {
     # ONE LINE PER DOCTOR
     ###########################################################################
 
-        system("del roster_zero.txt")
-
-       for (doc in all_docs) {
+    for (doc in all_docs) {
 
 
         out = FIRSTLAST[doc]
 
-        zero = out
+
 
         #######################################################################
         # ONE COLUMN PER CALENDAR DAY
@@ -449,20 +446,15 @@ END {
             ###################################################################
 
             out = out "," code
-        
-            zero = zero "," "o"
+        }
 
-       }
 
-  
 
         #######################################################################
         # PRINT COMPLETED DOCTOR ROW
         #######################################################################
 
         print out
-
-        print zero >> "roster_zero.txt"
     }
     ###########################################################################
     # PRINT COLUMN -> CALENDAR DATE MAP TO STDERR

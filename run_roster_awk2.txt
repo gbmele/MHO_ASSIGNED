@@ -1,0 +1,85 @@
+# build_roster.awk
+#
+# Usage
+#
+# gawk -f build_roster.awk
+#
+
+BEGIN {
+
+    build("26/10/2026","03/01/2027","assignedOctJan.txt","octjan_leave.txt","octjan")
+
+    exit
+}
+
+function build(start,end,assigned,leave,prefix)
+{
+    ########################################################
+    # STEP 1
+    # Build leave overrides
+    #
+    # current_leave.txt contains:
+    #
+    # lsmith 8 l
+    # lsmith 9 l
+    # mchong 29 l
+    ########################################################
+
+    run(\
+        "gawk " \
+        "-v start=\"" start "\" " \
+        "-v end=\"" end "\" " \
+        "-f leave_to_mzn.txt " \
+        leave \
+        " > current_leave.txt"\
+    )
+
+
+    ########################################################
+    # STEP 2
+    # Build roster pivot
+    ########################################################
+
+    run(\
+        "gawk " \
+        "-v start=\"" start "\" " \
+        "-v end=\"" end "\" " \
+        "-f pivot2.txt " \
+        assigned \
+        " > " prefix "_pivot.csv"\
+    )
+
+
+    ########################################################
+    # STEP 3
+    # Build MiniZinc roster
+    #
+    # roster_to_SICmzn.txt will read:
+    #
+    # current_leave.txt
+    #
+    ########################################################
+
+    run(\
+        "gawk " \
+        "-f roster_to_SICmzn.txt " \
+        prefix "_pivot.csv" \
+        " > " prefix "_roster.mzn"\
+    )
+
+    print "DONE"
+	system ("del current_leave.txt")
+}
+
+
+function run(cmd)
+{
+    print "\n>>> " cmd "\n"
+
+    if (system(cmd))
+    {
+        print "FAILED:"
+        print cmd
+        exit 1
+    }
+}
