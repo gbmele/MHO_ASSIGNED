@@ -3,7 +3,7 @@
 # Usage:
 #
 # gawk -v start="09/28/2026" -v end="10/25/2026" \
-#      -f leave_to_mzn.awk leave_list.tsv > leave.mzn
+#      -f leave_to_mzn.txt leave_list.tsv will print to standard output to be picked up by another program
 #
 # Input:
 # TAB-delimited file with headers including:
@@ -19,8 +19,9 @@
 # Andrew Rosengarten -> aroseng
 #
 # Output:
-# constraint roster[gmele,1,l]=1;
-# constraint roster[gmele,2,l]=1;
+#  gmele,1,l
+#  gmele,2,l 
+#
 # ...
 
 
@@ -37,6 +38,14 @@ BEGIN {
     }
 
     maxdays = int((end_sec - start_sec) / 86400) + 1
+
+### first output
+###    print "array[docs,days] of bool: leave =   \n"
+###    print "array2d(docs, days,                   \n"
+###    print "        [ false | doc in docs, day in days ]); \n"
+
+
+
 }
 
 
@@ -148,13 +157,19 @@ next
     # overlap for the same doctor.
     # --------------------------------------------------------
 
+
     for (day = first_day; day <= last_day; day++) {
 
         key = doc SUBSEP day
 
         if (!(key in seen)) {
 
-            print "constraint roster[" doc "," day ",l]=1;"
+#            print "constraint roster[" doc "," day "] = 1   /\\   roster[" doc "," day "] = 0     ;"
+	   
+#            printf("constraint roster[%s,%s,l]=1 ;  \n",doc,day) 
+
+##the new printga
+            printf("%s,%d,l\n", doc, day)
 
             seen[key] = 1
         }
