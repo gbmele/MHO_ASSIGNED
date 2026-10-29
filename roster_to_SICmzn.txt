@@ -76,7 +76,7 @@ END{
 
 	printf ("int: DAYS = %s ; \n" , NUM_DAYS)
 
-	print "enum shifts =   {o,a,p,c,l,s,i,erl,al,cl,lsl,mat,pat,lwop,sab,phnw,apo ,x ,oc,u,ua,up,ap,ao,po,co,apoc,aco}; \n"
+	print "enum shifts =   {o,a,p,c,l,s,i,perl,al,cl,lsl,mat,pat,lwop,sab,phnw,apo ,x ,oc,u,ua,up,ap,ao,po,co,apoc,aco}; \n"
 
 	enum ="enum docs = {"
 	for(doc in DOCS){
