@@ -3,6 +3,8 @@
 #       by itself it can take a complete roster and allocate SIC for each doctor.
 # 	include allocations file where all the other work can be done for a minimal roster input...
 
+##      now processes current_leave.txt (producded by leave_to_mzn.txt)  which is in form --doc day shift and will output "roster[doc,day,l]=1;" 
+
 
 #11/10
 #	added %include ALLOCATIONS.mzn; to second line of output.	
