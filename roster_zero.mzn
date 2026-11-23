@@ -1,5 +1,8 @@
 include "globals.mzn" ;             
-include "ALLOCATIONS.mzn" ;       
+%include "ALLOCATIONS.mzn" ;       
+%include "ALLOCATIONS_MH.mzn" ;       
+
+%%include "ALLOCATIONS_SIC.mzn"; 
 
 % include "global_calendar.mzn"  ;  
 
@@ -61,9 +64,11 @@ constraint forall(d in docs, day in 1..DAYS)(
 % DAILY REQUIREMENTS    
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%    
+
+ %% turn this off to allow roster_zero to work
+ 
+ %% TURN THIS ON IF ROSTER IS COMPLETTLEY DONE to this point
 /*
-
-
 constraint forall(day in 1..DAYS)(    
 
 sum(d in docs)(bool2int(ssu[d,day])) = 1    
@@ -243,7 +248,7 @@ show([d | d in docs where fix(inc[d,day]) = true]) ++"," | day in 1..DAYS ];
 
 output["\n\n"];  
 
-output["\nONCALL\n"];  
+output["\nONCALL\n"];    
 
 output [  
 
@@ -280,48 +285,47 @@ predicate set_SIC(docs:doc,int:minS,int:S,int:minI,int:I,int:OC_min,int:OC_max)=
 
 
 %include "SIC_FAIRNESS.mzn"; 
-/*
-constraint set_SIC(yperera,0,3, 0,3, 0,3); 
-constraint set_SIC(skapita,0,3, 0,3, 0,3); 
-constraint set_SIC(aroseng,0,3, 0,3, 0,3); 
-constraint set_SIC(mlynch,0,3, 0,3, 0,3); 
-constraint set_SIC(jlim,0,3, 0,3, 0,3); 
-constraint set_SIC(jchan,0,3, 0,3, 0,3); 
-constraint set_SIC(kvu,0,3, 0,3, 0,3); 
-constraint set_SIC(hlauren,0,3, 0,3, 0,3); 
-constraint set_SIC(xhoo,0,3, 0,3, 0,3); 
-constraint set_SIC(lward,0,3, 0,3, 0,3); 
-constraint set_SIC(lclarke,0,3, 0,3, 0,3); 
-constraint set_SIC(mlew,0,3, 0,3, 0,3); 
-constraint set_SIC(parcher,0,3, 0,3, 0,3); 
-constraint set_SIC(kmoussa,0,3, 0,3, 0,3); 
-constraint set_SIC(tbridga,0,3, 0,3, 0,3); 
-constraint set_SIC(gnathan,0,3, 0,3, 0,3); 
-constraint set_SIC(dhezeki,0,3, 0,3, 0,3); 
-constraint set_SIC(mchong,0,3, 0,3, 0,3); 
-constraint set_SIC(rprimro,0,3, 0,3, 0,3); 
-constraint set_SIC(avarma,0,3, 0,3, 0,3); 
-constraint set_SIC(blee,0,3, 0,3, 0,3); 
-constraint set_SIC(bmc,0,3, 0,3, 0,3); 
-constraint set_SIC(ssurka,0,3, 0,3, 0,3); 
-constraint set_SIC(dbui,0,3, 0,3, 0,3); 
-constraint set_SIC(dlowman,0,3, 0,3, 0,3); 
-constraint set_SIC(lsmith,0,3, 0,3, 0,3); 
-constraint set_SIC(gmele,0,3, 0,3, 0,3); 
-constraint set_SIC(rmarson,0,3, 0,3, 0,3); 
-constraint set_SIC(ewoodwa,0,3, 0,3, 0,3); 
-constraint set_SIC(cknight,0,3, 0,3, 0,3); 
-constraint set_SIC(lbridgf,0,3, 0,3, 0,3); 
-constraint set_SIC(awallac,0,3, 0,3, 0,3); 
-constraint set_SIC(ccobela,0,3, 0,3, 0,3); 
-*/
+
+constraint set_SIC(yperera,0,23, 0,23, 0,23); 
+constraint set_SIC(skapita,0,13, 0,13, 0,13); 
+constraint set_SIC(aroseng,0,13, 0,23, 0,23); 
+constraint set_SIC(mlynch,0,13, 0,13, 0,13); 
+constraint set_SIC(jlim,0,13, 0,13, 0,13); 
+constraint set_SIC(jchan,0,13, 0,13, 0,13); 
+constraint set_SIC(kvu,0,13, 0,13, 0,13); 
+constraint set_SIC(hlauren,0,13, 0,13, 0,13); 
+constraint set_SIC(xhoo,0,13, 0,13, 0,13); 
+constraint set_SIC(lward,0,13, 0,13, 0,13); 
+constraint set_SIC(lclarke,0,13, 0,13, 0,13); 
+constraint set_SIC(mlew,0,13, 0,13, 0,13); 
+constraint set_SIC(parcher,0,31, 0,13, 0,13); 
+constraint set_SIC(kmoussa,0,13, 0,13, 0,13); 
+constraint set_SIC(tbridga,0,13, 0,13, 0,13); 
+constraint set_SIC(gnathan,0,13, 0,13, 0,13); 
+constraint set_SIC(dhezeki,0,13, 0,13, 0,13); 
+constraint set_SIC(mchong,0,13, 0,31, 0,13); 
+constraint set_SIC(rprimro,0,13, 0,13, 0,13); 
+constraint set_SIC(avarma,0,13, 0,13, 0,13); 
+constraint set_SIC(blee,0,13, 0,13, 0,13); 
+constraint set_SIC(bmc,0,13, 0,13, 0,13); 
+constraint set_SIC(ssurka,0,13, 0,13, 0,13); 
+constraint set_SIC(dbui,0,13, 0,13, 0,13); 
+constraint set_SIC(dlowman,0,13, 0,13, 0,13); 
+constraint set_SIC(lsmith,0,13, 0,13, 0,13); 
+constraint set_SIC(gmele,0,13, 0,13, 0,13); 
+constraint set_SIC(rmarson,0,13, 0,13, 0,13); 
+constraint set_SIC(ewoodwa,0,13, 0,13, 0,13); 
+constraint set_SIC(cknight,0,13, 0,13, 0,13); 
+constraint set_SIC(lbridgf,0,13, 0,13, 0,13); 
+constraint set_SIC(awallac,0,13, 0,13, 0,13); 
+constraint set_SIC(ccobela,0,13, 0,13, 0,13); 
 
 
 
-constraint roster[yperera,1,o] = 1 ; 
-constraint roster[yperera,2,o] = 1 ; 
-constraint roster[yperera,3,o] = 1 ; 
-constraint roster[yperera,4,o] = 1 ; 
+constraint roster[yperera,1,l] = 1 ; 
+constraint roster[yperera,2,l] = 1 ; 
+constraint roster[yperera,3,a] = 1 ; 
+constraint roster[yperera,4,p] = 1 ; 
 constraint roster[yperera,5,o] = 1 ; 
 constraint roster[yperera,6,o] = 1 ; 
 constraint roster[yperera,7,o] = 1 ; 
@@ -388,16 +392,16 @@ constraint roster[yperera,67,o] = 1 ;
 constraint roster[yperera,68,o] = 1 ; 
 constraint roster[yperera,69,o] = 1 ; 
 constraint roster[yperera,70,o] = 1 ; 
-constraint roster[skapita,1,o] = 1 ; 
-constraint roster[skapita,2,o] = 1 ; 
-constraint roster[skapita,3,o] = 1 ; 
-constraint roster[skapita,4,o] = 1 ; 
-constraint roster[skapita,5,o] = 1 ; 
-constraint roster[skapita,6,o] = 1 ; 
-constraint roster[skapita,7,o] = 1 ; 
+constraint roster[skapita,1,l] = 1 ; 
+constraint roster[skapita,2,l] = 1 ; 
+constraint roster[skapita,3,l] = 1 ; 
+constraint roster[skapita,4,l] = 1 ; 
+constraint roster[skapita,5,l] = 1 ; 
+constraint roster[skapita,6,l] = 1 ; 
+constraint roster[skapita,7,l] = 1 ; 
 constraint roster[skapita,8,o] = 1 ; 
 constraint roster[skapita,9,o] = 1 ; 
-constraint roster[skapita,10,o] = 1 ; 
+constraint roster[skapita,10,p] = 1 ; 
 constraint roster[skapita,11,o] = 1 ; 
 constraint roster[skapita,12,o] = 1 ; 
 constraint roster[skapita,13,o] = 1 ; 
